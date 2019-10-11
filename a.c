@@ -45,13 +45,13 @@ void getshortpath(){
   int row;
   int col;
   int a;
-  int myrank;
+  int my_rank;
   int size;
   int count;
   MPI_Request request;
   MPI_Status status;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
   output = (int **)malloc(row_col[0] * sizeof(int*));
 
@@ -63,10 +63,9 @@ void getshortpath(){
 
     for(count=0; count<size;count++){
       if(my_rank == count){
-
-      int previous = row_col[0]/(size) * count;
-      int until = row_col[0]/(size) * count+1;
-
+      int chunk_size = row_col[0]/(size);
+      int previous = count;
+      int until = count+(row_col[0]/(size));
       for(row=previous; row<until;row++){
 
         for(col=0;col<row_col[0];col++){
