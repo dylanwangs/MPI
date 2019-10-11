@@ -46,35 +46,53 @@ void getshortpath(){
   int a;
   int myrank;
   int size;
-
+  int count;
+  MPI_Request request;
+  MPI_Status status;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
   output = (int **)malloc(row_col[0] * sizeof(int*));
+
   for (a=0; a<row_col[0]; a++){
       output[a] = (int *)malloc( row_col[0] * sizeof(int));
   }
 
-  for(row=0;row<row_col[0];row++){
-    for(col=0;col<row_col[0];col++){
-      if(row==col){
-        output[row][col] = 0;
-      }
-      else{
-        int Min = Mat[row][col];
-        int intercount;
-        for(intercount=0; intercount<row_col[0]; intercount++){
-          if( (Mat[row][intercount] != 0) && (Mat[intercount][col] != 0) ){
-            int token = Mat[row][intercount] + Mat[intercount][col];
-            if((Min==0) || ((Min>token) && (Min!=0))){
-              Min = token;
-            }
+
+
+    for(count=0; count<size;count++){
+      if(my_rank == count){
+
+      int previous = row_col[0]/(size) * count;
+      int until = row_col[0]/(size) * count+1;
+
+      for(row=previous; row<until;row++){
+
+        for(col=0;col<row_col[0];col++){
+          if(row==col){
+            output[row][col] = 0;
           }
+          else{
+            int Min = Mat[row][col];
+            int intercount;
+            for(intercount=0; intercount<row_col[0]; intercount++){
+              if( (Mat[row][intercount] != 0) && (Mat[intercount][col] != 0) ){
+                int token = Mat[row][intercount] + Mat[intercount][col];
+                if((Min==0) || ((Min>token) && (Min!=0))){
+                  Min = token;
+                }
+              }
+            }
+            output[row][col] = Min;
+          }
+          printf("%d ", output[row][col]);
         }
-        output[row][col] = Min;
+        printf("\n");
       }
-      printf("%d ", output[row][col]);
+      break;
     }
-    printf("\n");
-  }
+    }
+
 
 
 }
@@ -103,6 +121,7 @@ void filewrite(char *f){
 
 int main(int argc, char** argv) {
         MPI_Init(&argc, &argv);
+
         int opt;
         int fflag = 0, errflag =0;
         int **out;
