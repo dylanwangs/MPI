@@ -44,6 +44,9 @@ void getshortpath(){
   int row;
   int col;
   int a;
+  int myrank;
+  int size;
+
 
   output = (int **)malloc(row_col[0] * sizeof(int*));
   for (a=0; a<row_col[0]; a++){
@@ -72,6 +75,8 @@ void getshortpath(){
     }
     printf("\n");
   }
+
+
 }
 
 void filewrite(char *f){
@@ -98,7 +103,6 @@ void filewrite(char *f){
 
 int main(int argc, char** argv) {
         MPI_Init(&argc, &argv);
-
         int opt;
         int fflag = 0, errflag =0;
         int **out;
@@ -130,6 +134,7 @@ int main(int argc, char** argv) {
         }
         fileread(filename);
         getshortpath();
+
         filewrite(filename);
         MPI_Finalize();
         return 0;
