@@ -63,9 +63,20 @@ void getshortpath(){
 
     for(count=0; count<size;count++){
       if(my_rank == count){
+      int previous;
+      int until;
+      if(my_rank == (size-1)){
+        printf("%d\n", my_rank);
+        int chunk_size = row_col[0]/(size);
+         previous = count * chunk_size;
+         until = row_col[0];
+      }
+      else{
       int chunk_size = row_col[0]/(size);
-      int previous = count;
-      int until = count+(row_col[0]/(size));
+       previous = count * chunk_size;
+       until = previous + chunk_size;
+      }
+
       for(row=previous; row<until;row++){
 
         for(col=0;col<row_col[0];col++){
