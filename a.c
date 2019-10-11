@@ -4,6 +4,7 @@
 #include <string.h>
 #include <getopt.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 FILE *fp;
 int row_col[1];
@@ -107,6 +108,7 @@ int main(int argc, char** argv) {
         int fflag = 0, errflag =0;
         int **out;
         char filename[1000];
+        struct timeval start, end;
         if(argc > 3){
           printf("too many arguments were taken, please check again\n");
           return -1;
@@ -133,8 +135,11 @@ int main(int argc, char** argv) {
           strcpy(filename, argv[1]);
         }
         fileread(filename);
+        gettimeofday(&start, NULL);
         getshortpath();
-
+        gettimeofday(&end, NULL);
+        double delta = ((end.tv_sec - start.tv_sec) * 1000000u + end.tv_usec - start.tv_usec) / 1.e6;
+        printf("time elapsed = %12.10f\n", delta);
         filewrite(filename);
         MPI_Finalize();
         return 0;
