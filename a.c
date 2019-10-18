@@ -24,7 +24,6 @@ void fileread(char *file){
 
   fread(row_col,sizeof(row_col),1,fp);
 
-
   Mat = (int **)malloc(row_col[0] * sizeof(int*));
   for (a=0; a<row_col[0]; a++){
       Mat[a] = (int *)malloc( row_col[0] * sizeof(int));
@@ -58,21 +57,20 @@ void getshortpath(){
   for (a=0; a<row_col[0]; a++){
       output[a] = (int *)malloc( row_col[0] * sizeof(int));
   }
+    int chunk_size = row_col[0]/(size);
 
 
 
-    for(count=0; count<size;count++){
-      if(my_rank == count){
       int previous;
       int until;
+      count = my_rank;
+
       if(my_rank == (size-1)){
-        printf("%d\n", my_rank);
-        int chunk_size = row_col[0]/(size);
+
          previous = count * chunk_size;
          until = row_col[0];
       }
       else{
-      int chunk_size = row_col[0]/(size);
        previous = count * chunk_size;
        until = previous + chunk_size;
       }
@@ -96,14 +94,36 @@ void getshortpath(){
             }
             output[row][col] = Min;
           }
-          printf("%d ", output[row][col]);
         }
-        printf("\n");
       }
-      break;
-    }
-    }
+      if(my_rank==0){
+        int from;
+        for(from =1; from<size; from++){
+          previous = from * chunk_size;
+          until = previous + chunk_size;
+          for(row = previous; row<until;row++){
+            for(col=0; col<row_col[0]; col++){
+                MPI_RECV(output[row][col], sizeof(int), MPI_INT, from, MPI_COMM_WORLD,&status);
+            }
+        }
+        }
+      }
+      else{
+        if(my_rank == (size-1)){
 
+           previous = count * chunk_size;
+           until = row_col[0];
+        }
+        else{
+         previous = count * chunk_size;
+         until = previous + chunk_size;
+        }
+        for(row = previous; row<until;row++){
+          for(col=0; col<row_col[0]; col++){
+              MPI_SEND(output[row][col], sizeof(int), MPI_INT, 0, MPI_COMM_WORLD);
+          }
+      }
+    }
 
 
 }
