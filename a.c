@@ -138,7 +138,7 @@ void getshortpath(){
 
 
 
-/*void filewrite(char *f){
+void filewrite(char *f){
   char *out;
   char outname[1000];
   FILE *fw;
@@ -152,12 +152,12 @@ void getshortpath(){
 
   for(r=0;r<row_col[0];r++){
     for(c=0;c<row_col[0];c++){
-      tokenw[0] = output[r][c];
+      tokenw[0] = final[r][c];
       fwrite(tokenw,sizeof(tokenw),1,fw);
     }
   }
 
-}*/
+}
 
 
 int main(int argc, char** argv) {
@@ -209,10 +209,11 @@ int main(int argc, char** argv) {
 
 
         if(rank==(sizea-1)){
+        filewrite(filename);
         printf("time elapsed = %12.10f on rank %d\n", delta, rank);
         }
         MPI_Finalize();
-        /*filewrite(filename);*/
+
 
 
         return 0;
