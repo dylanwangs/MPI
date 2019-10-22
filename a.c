@@ -122,20 +122,7 @@ void getshortpath(){
     }
     }
     }
-
-        /*if(my_rank==(size-1)){
-          int b;
-        for(a=0;a<row_col[0];a++){
-          for(b=0;b<row_col[0];b++){
-            printf("%d ", output[a][b]);
-          }
-          printf("\n");
-        }
-      }*/
 }
-
-
-
 
 
 void filewrite(char *f){
