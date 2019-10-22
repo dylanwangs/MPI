@@ -110,19 +110,31 @@ void getshortpath(){
     if(my_rank==(size-1)){
       int r;
       for(r=(size-2); r>=0; r--){
-      for(col=0; col<row_col[0];col++){
-      MPI_Recv(&output[r*chunk_size+point][col], 1, MPI_INT, r, 0,MPI_COMM_WORLD,&status);
-
-    }
+    //  for(col=0; col<row_col[0];col++){
+      MPI_Recv(output[r*chunk_size+point], row_col[0], MPI_INT, r, 0,MPI_COMM_WORLD,&status);
+  //  }
     }
     }
     else{
-     for(col=0;col<row_col[0];col++){
-      MPI_Send(&output[previous+point][col], 1, MPI_INT, size-1, 0, MPI_COMM_WORLD);
+    // for(col=0;col<row_col[0];col++){
+      MPI_Send(output[previous+point],row_col[0], MPI_INT, size-1, 0, MPI_COMM_WORLD);
+    //}
     }
     }
-    }
+
+        /*if(my_rank==(size-1)){
+          int b;
+        for(a=0;a<row_col[0];a++){
+          for(b=0;b<row_col[0];b++){
+            printf("%d ", output[a][b]);
+          }
+          printf("\n");
+        }
+      }*/
 }
+
+
+
 
 
 void filewrite(char *f){
@@ -187,11 +199,8 @@ int main(int argc, char** argv) {
 
         fileread(filename);
         gettimeofday(&start, NULL);
-
         getshortpath();
-
         gettimeofday(&end, NULL);
-
         double delta = ((end.tv_sec - start.tv_sec) * 1000000u + end.tv_usec - start.tv_usec) / 1.e6;
 
 
