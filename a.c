@@ -66,18 +66,18 @@ void getshortpath(){
       final[a] = (int *)malloc( row_col[0] * sizeof(int));
   }
 
+
+
     int chunk_size = row_col[0]/(size);
-
-
       int previous;
       int until;
+      int remind;
       count = my_rank;
 
-
       if(my_rank == (size-1)){
-
          previous = count * chunk_size;
          until = row_col[0];
+         remind = until - previous;
       }
       else{
        previous = count * chunk_size;
@@ -85,7 +85,6 @@ void getshortpath(){
       }
 
       for(row=previous; row<until;row++){
-
         for(col=0;col<row_col[0];col++){
           if(row==col){
             output[row][col] = 0;
@@ -106,13 +105,34 @@ void getshortpath(){
         }
       }
 
-      if(my_rank!=0){
-        for(row = previous; row<until; row++){
-            MPI_Gather(&output[previous], row_col[0], MPI_INT,&final[previous], row_col[0],MPI_INT, 0,MPI_COMM_WORLD );
-          }
-        }
 
- }
+    for(point=0; point<chunk_size;point++){
+    if(my_rank==(size-1)){
+      int r;
+      for(r=(size-2); r>=0; r--){
+      for(col=0; col<row_col[0];col++){
+      MPI_Recv(&output[r*chunk_size+point][col], 1, MPI_INT, r, 0,MPI_COMM_WORLD,&status);
+
+    }
+    }
+    }
+    else{
+     for(col=0;col<row_col[0];col++){
+      MPI_Send(&output[previous+point][col], 1, MPI_INT, size-1, 0, MPI_COMM_WORLD);
+    }
+    }
+    }
+
+        /*if(my_rank==(size-1)){
+          int b;
+        for(a=0;a<row_col[0];a++){
+          for(b=0;b<row_col[0];b++){
+            printf("%d ", output[a][b]);
+          }
+          printf("\n");
+        }
+      }*/
+}
 
 
 
@@ -143,11 +163,13 @@ void getshortpath(){
 int main(int argc, char** argv) {
         MPI_Init(&argc, &argv);
         int rank;
+        int sizea;
         int opt;
         int fflag = 0, errflag =0;
         int **out;
         char filename[1000];
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &sizea);
         struct timeval start, end;
         if(argc > 3){
           printf("too many arguments were taken, please check again\n");
@@ -182,21 +204,14 @@ int main(int argc, char** argv) {
         getshortpath();
 
         gettimeofday(&end, NULL);
-        sleep(10);
 
         double delta = ((end.tv_sec - start.tv_sec) * 1000000u + end.tv_usec - start.tv_usec) / 1.e6;
-        int a, b;
 
-        MPI_Finalize();
+
+        if(rank==(sizea-1)){
         printf("time elapsed = %12.10f on rank %d\n", delta, rank);
-        if(rank==0){
-        for(a=0;a<row_col[0];a++){
-          for(b=0;b<row_col[0];b++){
-            printf("%d ", final[a][b]);
-          }
-          printf("\n");
         }
-        }
+        MPI_Finalize();
         /*filewrite(filename);*/
 
 
