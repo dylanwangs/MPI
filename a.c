@@ -5,11 +5,12 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <sys/time.h>
-
+#include <unistd.h>
 FILE *fp;
 int row_col[1];
 int **Mat;
 int **output;
+int **final;
 
 void fileread(char *file){
   int rownum;
@@ -47,23 +48,31 @@ void getshortpath(){
   int my_rank;
   int size;
   int count;
+  int point;
   MPI_Request request;
   MPI_Status status;
+
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
   output = (int **)malloc(row_col[0] * sizeof(int*));
-
   for (a=0; a<row_col[0]; a++){
       output[a] = (int *)malloc( row_col[0] * sizeof(int));
   }
-    int chunk_size = row_col[0]/(size);
 
+
+  final =  (int **)malloc(row_col[0] * sizeof(int*));
+  for (a=0; a<row_col[0]; a++){
+      final[a] = (int *)malloc( row_col[0] * sizeof(int));
+  }
+
+    int chunk_size = row_col[0]/(size);
 
 
       int previous;
       int until;
       count = my_rank;
+
 
       if(my_rank == (size-1)){
 
@@ -96,39 +105,20 @@ void getshortpath(){
           }
         }
       }
-      if(my_rank==0){
-        int from;
-        for(from =1; from<size; from++){
-          previous = from * chunk_size;
-          until = previous + chunk_size;
-          for(row = previous; row<until;row++){
-            for(col=0; col<row_col[0]; col++){
-                MPI_RECV(output[row][col], sizeof(int), MPI_INT, from, MPI_COMM_WORLD,&status);
-            }
-        }
-        }
-      }
-      else{
-        if(my_rank == (size-1)){
 
-           previous = count * chunk_size;
-           until = row_col[0];
-        }
-        else{
-         previous = count * chunk_size;
-         until = previous + chunk_size;
-        }
-        for(row = previous; row<until;row++){
-          for(col=0; col<row_col[0]; col++){
-              MPI_SEND(output[row][col], sizeof(int), MPI_INT, 0, MPI_COMM_WORLD);
+      if(my_rank!=0){
+        for(row = previous; row<until; row++){
+            MPI_Gather(&output[previous], row_col[0], MPI_INT,&final[previous], row_col[0],MPI_INT, 0,MPI_COMM_WORLD );
           }
-      }
-    }
+        }
+
+ }
 
 
-}
 
-void filewrite(char *f){
+
+
+/*void filewrite(char *f){
   char *out;
   char outname[1000];
   FILE *fw;
@@ -147,16 +137,17 @@ void filewrite(char *f){
     }
   }
 
-}
+}*/
 
 
 int main(int argc, char** argv) {
         MPI_Init(&argc, &argv);
-
+        int rank;
         int opt;
         int fflag = 0, errflag =0;
         int **out;
         char filename[1000];
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         struct timeval start, end;
         if(argc > 3){
           printf("too many arguments were taken, please check again\n");
@@ -183,14 +174,32 @@ int main(int argc, char** argv) {
         if(!fflag){
           strcpy(filename, argv[1]);
         }
+
+
         fileread(filename);
         gettimeofday(&start, NULL);
+
         getshortpath();
+
         gettimeofday(&end, NULL);
+        sleep(10);
+
         double delta = ((end.tv_sec - start.tv_sec) * 1000000u + end.tv_usec - start.tv_usec) / 1.e6;
-        printf("time elapsed = %12.10f\n", delta);
-        filewrite(filename);
+        int a, b;
+
         MPI_Finalize();
+        printf("time elapsed = %12.10f on rank %d\n", delta, rank);
+        if(rank==0){
+        for(a=0;a<row_col[0];a++){
+          for(b=0;b<row_col[0];b++){
+            printf("%d ", final[a][b]);
+          }
+          printf("\n");
+        }
+        }
+        /*filewrite(filename);*/
+
+
         return 0;
 
 }
