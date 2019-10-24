@@ -35,7 +35,9 @@ void fileread(char *file){
     for(colnum=0; colnum<row_col[0]; colnum++){
       fread(token,sizeof(token),1,fp);
       Mat[rownum][colnum] = token[0];
+
     }
+
   }
 }
 
@@ -49,6 +51,8 @@ void getshortpath(){
   int point;
   MPI_Request request;
   MPI_Status status;
+  int *array;
+  array = (int*)malloc(row_col[0] * sizeof(int));
 
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
@@ -80,50 +84,46 @@ void getshortpath(){
        previous = my_rank * chunk_size;
        until = previous + chunk_size;
       }
-      //algorism based on each node
+    //algorism based on each node
+    int intercount;
+    for(intercount=0; intercount<row_col[0]; intercount++){
+      if(my_rank == (intercount/chunk_size)){
+      for(col=0; col<row_col[0];col++){
+        array[col] = Mat[intercount][col];
+      }
+    }
+      MPI_Bcast (array, row_col[0], MPI_INT, intercount/chunk_size, MPI_COMM_WORLD);
       for(row=previous; row<until;row++){
         for(col=0;col<row_col[0];col++){
           if(row==col){
-            output[row][col] = 0;
+            Mat[row][col] = 0;
           }
           else{
-            int Min = Mat[row][col];
-            int intercount;
-            for(intercount=0; intercount<row_col[0]; intercount++){
-              if( (Mat[row][intercount] != 0) && (Mat[intercount][col] != 0) ){
-                int token = Mat[row][intercount] + Mat[intercount][col];
-                if((Min==0) || ((Min>token) && (Min!=0))){
-                  Min = token;
+              if( (Mat[row][intercount] != 0) && (array[col]!=0)){
+
+                int token = Mat[row][intercount] + array[col];
+
+                if((Mat[row][col]==0) || Mat[row][col]>token){
+                  Mat[row][col] = token;
                 }
               }
             }
-            output[row][col] = Min;
           }
         }
       }
 
-    //send back results to last node row by row
-    for(point=0; point<chunk_size;point++){
-    if(my_rank==(size-1)){
-      int r;
-      for(r=(size-2); r>=0; r--){
-      MPI_Recv(output[r*chunk_size+point], row_col[0], MPI_INT, r, 0,MPI_COMM_WORLD,&status);
-    }
-    }
-    else{
-      MPI_Send(output[previous+point],row_col[0], MPI_INT, size-1, 0, MPI_COMM_WORLD);
-    }
-    }
-        //testing result
-        /*if(my_rank==(size-1)){
-          int b;
-        for(a=0;a<row_col[0];a++){
-          for(b=0;b<row_col[0];b++){
-            printf("%d ", output[a][b]);
-          }
-          printf("\n");
+      for(point=0; point<chunk_size;point++){
+        if(my_rank==(size-1)){
+          int r;
+          for(r=(size-2); r>=0; r--){
+          MPI_Recv(Mat[r*chunk_size+point], row_col[0], MPI_INT, r, 0,MPI_COMM_WORLD,&status);
         }
-      }*/
+        }
+        else{
+          MPI_Send(Mat[previous+point],row_col[0], MPI_INT, size-1, 0, MPI_COMM_WORLD);
+        }
+        }
+
 }
 
 //write file function
@@ -194,12 +194,12 @@ int main(int argc, char** argv) {
         gettimeofday(&end, NULL);
         //get time taken
         double delta = ((end.tv_sec - start.tv_sec) * 1000000u + end.tv_usec - start.tv_usec) / 1.e6;
-
         if(rank==(sizea-1)){
         filewrite(filename);
         printf("time elapsed = %12.10f on rank %d\n", delta, rank);
         //only print the time taken for last node(as it's the longgest)
         }
+
         MPI_Finalize();
         return 0;
 }
