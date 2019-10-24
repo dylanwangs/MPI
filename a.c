@@ -9,8 +9,6 @@
 FILE *fp;
 int row_col[1];
 int **Mat;
-int **output;
-int **final;
 
 //read matrix from binary format
 void fileread(char *file){
@@ -57,17 +55,7 @@ void getshortpath(){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
-  // allocate memory for 2D array
-  output = (int **)malloc(row_col[0] * sizeof(int*));
-  for (a=0; a<row_col[0]; a++){
-      output[a] = (int *)malloc( row_col[0] * sizeof(int));
-  }
 
- //allocate memory for result 2D array
-  final =  (int **)malloc(row_col[0] * sizeof(int*));
-  for (a=0; a<row_col[0]; a++){
-      final[a] = (int *)malloc( row_col[0] * sizeof(int));
-  }
     //get chunk size based on rows
     int chunk_size = row_col[0]/(size);
     int remind; //chunk size for reminder node (last node)
@@ -86,37 +74,49 @@ void getshortpath(){
       }
     //algorism based on each node
     int intercount;
+    //intercount for K value of floyed warshall matrix
     for(intercount=0; intercount<row_col[0]; intercount++){
-      if(my_rank == (intercount/chunk_size)){
+      //find the root of bcast to update the row
+      int root = intercount/chunk_size;
+      if(root>(size-1)){
+        root = size-1;
+      }
+      if(my_rank == root){
       for(col=0; col<row_col[0];col++){
         array[col] = Mat[intercount][col];
+        //array[col] is the row that has been updated
       }
     }
-      MPI_Bcast (array, row_col[0], MPI_INT, intercount/chunk_size, MPI_COMM_WORLD);
+      //update the row
+      MPI_Bcast (array, row_col[0], MPI_INT, root, MPI_COMM_WORLD);
+      //i value for floyed warshall matrix
       for(row=previous; row<until;row++){
+        //j value for floyed warshall algorithm
         for(col=0;col<row_col[0];col++){
+          //assign every diagnal elements 0
           if(row==col){
             Mat[row][col] = 0;
           }
           else{
+            //get rid of elements with 0 :"means no path through"
               if( (Mat[row][intercount] != 0) && (array[col]!=0)){
-
                 int token = Mat[row][intercount] + array[col];
-
                 if((Mat[row][col]==0) || Mat[row][col]>token){
                   Mat[row][col] = token;
+                  //update when shorter path found
                 }
               }
             }
           }
         }
       }
-
+      //sending the row that this perticular core handle
       for(point=0; point<chunk_size;point++){
         if(my_rank==(size-1)){
           int r;
           for(r=(size-2); r>=0; r--){
           MPI_Recv(Mat[r*chunk_size+point], row_col[0], MPI_INT, r, 0,MPI_COMM_WORLD,&status);
+
         }
         }
         else{
@@ -141,7 +141,7 @@ void filewrite(char *f){
 
   for(r=0;r<row_col[0];r++){
     for(c=0;c<row_col[0];c++){
-      tokenw[0] = final[r][c];
+      tokenw[0] = Mat[r][c];
       fwrite(tokenw,sizeof(tokenw),1,fw);
     }
   }
@@ -195,6 +195,13 @@ int main(int argc, char** argv) {
         //get time taken
         double delta = ((end.tv_sec - start.tv_sec) * 1000000u + end.tv_usec - start.tv_usec) / 1.e6;
         if(rank==(sizea-1)){
+          int r, c;
+          for(r=0;r<row_col[0];r++){
+            for(c=0;c<row_col[0];c++){
+              printf("%d ", Mat[r][c]);
+            }
+            printf("\n");
+          }
         filewrite(filename);
         printf("time elapsed = %12.10f on rank %d\n", delta, rank);
         //only print the time taken for last node(as it's the longgest)
