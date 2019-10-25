@@ -130,7 +130,7 @@ void filewrite(char *f){
   char *out;
   char outname[1000];
   FILE *fw;
-  int r, c, ;
+  int r, c;
   int tokenw[1];
 
   out = strtok(f, ".");
@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
         char filename[1000];
         MPI_Init(&argc, &argv);
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        MPI_Comm_size(MPI_COMM_WORLD, &sizea);
+        MPI_Comm_size(MPI_COMM_WORLD, &sizeofrank);
         struct timeval start, end;
         //check how many argument
         if(argc > 3){
