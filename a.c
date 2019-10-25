@@ -6,14 +6,22 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <unistd.h>
+
+/*
+Floyed warshall algorithm by MPI parallelism
+Work implemented for UWA CITS3402 project 2 by
+WANG SHUAI 21750188
+YING ZHANG 22237019
+*/
+
+
 FILE *fp;
 int row_col[1];
 int **Mat;
 
 //read matrix from binary format
 void fileread(char *file){
-  int rownum;
-  int colnum;
+  int rownum, colnum;
   int a = 0;
   int token[1];
 
@@ -21,40 +29,33 @@ void fileread(char *file){
     printf("couldn't find input matrix file %s\n", file);
     exit(1);
   }
-
+  //read number of vertices
   fread(row_col,sizeof(row_col),1,fp);
-
+ //malloc the reading/result matrix
   Mat = (int **)malloc(row_col[0] * sizeof(int*));
   for (a=0; a<row_col[0]; a++){
       Mat[a] = (int *)malloc( row_col[0] * sizeof(int));
   }
-
+  //read matrix from binary file
   for(rownum=0; rownum<row_col[0];rownum++){
     for(colnum=0; colnum<row_col[0]; colnum++){
       fread(token,sizeof(token),1,fp);
       Mat[rownum][colnum] = token[0];
-
     }
-
   }
 }
 
 //implemented Floyd Warshal algorism finding the shortest path
 void getshortpath(){
-  int row;
-  int col;
-  int a;
-  int my_rank;
-  int size;
-  int point;
+  int row, col, a, my_rank, size, point, intercount;
   MPI_Request request;
   MPI_Status status;
   int *array;
+
   array = (int*)malloc(row_col[0] * sizeof(int));
 
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-
 
     //get chunk size based on rows
     int chunk_size = row_col[0]/(size);
@@ -72,8 +73,8 @@ void getshortpath(){
        previous = my_rank * chunk_size;
        until = previous + chunk_size;
       }
+
     //algorism based on each node
-    int intercount;
     //intercount for K value of floyed warshall matrix
     for(intercount=0; intercount<row_col[0]; intercount++){
       //find the root of bcast to update the row
@@ -84,7 +85,7 @@ void getshortpath(){
       if(my_rank == root){
       for(col=0; col<row_col[0];col++){
         array[col] = Mat[intercount][col];
-        //array[col] is the row that has been updated
+      //array[col] is the row that has been updated
       }
     }
       //update the row
@@ -116,14 +117,12 @@ void getshortpath(){
           int r;
           for(r=(size-2); r>=0; r--){
           MPI_Recv(Mat[r*chunk_size+point], row_col[0], MPI_INT, r, 0,MPI_COMM_WORLD,&status);
-
         }
         }
         else{
           MPI_Send(Mat[previous+point],row_col[0], MPI_INT, size-1, 0, MPI_COMM_WORLD);
         }
         }
-
 }
 
 //write file function
@@ -131,8 +130,7 @@ void filewrite(char *f){
   char *out;
   char outname[1000];
   FILE *fw;
-  int r;
-  int c;
+  int r, c, ;
   int tokenw[1];
 
   out = strtok(f, ".");
@@ -145,14 +143,11 @@ void filewrite(char *f){
       fwrite(tokenw,sizeof(tokenw),1,fw);
     }
   }
-
 }
 
 
 int main(int argc, char** argv) {
-        int rank;
-        int sizea;
-        int opt;
+        int rank, sizeofrank, opt, r, c;
         int fflag = 0, errflag =0;
         int **out;
         char filename[1000];
@@ -187,21 +182,22 @@ int main(int argc, char** argv) {
           strcpy(filename, argv[1]);
         }
 
-
         fileread(filename);
         gettimeofday(&start, NULL);
         getshortpath();
         gettimeofday(&end, NULL);
         //get time taken
         double delta = ((end.tv_sec - start.tv_sec) * 1000000u + end.tv_usec - start.tv_usec) / 1.e6;
-        if(rank==(sizea-1)){
-          int r, c;
+        if(rank==(sizeofrank-1)){
+          /* for testing purpose
           for(r=0;r<row_col[0];r++){
             for(c=0;c<row_col[0];c++){
               printf("%d ", Mat[r][c]);
             }
             printf("\n");
           }
+          */
+        //write file only for root core
         filewrite(filename);
         printf("time elapsed = %12.10f on rank %d\n", delta, rank);
         //only print the time taken for last node(as it's the longgest)
